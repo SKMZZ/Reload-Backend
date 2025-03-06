@@ -8,7 +8,6 @@ const config = JSON.parse(fs.readFileSync("./Config/config.json").toString());
 const express = require("express");
 const app = express.Router();
 
-// Utilisation directe de __dirname
 const levelThresholdsAbove100 = fs.readFileSync(path.join(__dirname, '../responses/Ch1XP.txt'), 'utf-8')
   .split('\n')
   .reduce((acc, line) => {
@@ -24,7 +23,6 @@ const levelThresholdsAbove100 = fs.readFileSync(path.join(__dirname, '../respons
 const XP_PER_KILL = 25;
 const XP_PER_CHEST = 50;
 const XP_PER_WIN = 175;
-const XP_PER_TEST = 100000000;
 
 const variantsFilePath = path.join(__dirname, '../responses/variants.json');
 const variants = JSON.parse(fs.readFileSync(variantsFilePath, 'utf8'));
@@ -65,7 +63,7 @@ const grantReward = async (accountId, level) => {
     quantity: 1
   };
 
-  const processReward = (reward, rewardType) => {
+  const processReward = (reward) => {
     for (let key in reward) {
       if (key === "Currency:MtxPurchase") {
         const amountToAdd = reward[key];
@@ -98,48 +96,31 @@ const grantReward = async (accountId, level) => {
     }
   };
 
-  processReward(freeRewards, 'free');
+  processReward(freeRewards);
 
   if (profile.profiles.athena.stats.attributes.book_purchased) {
-    processReward(paidRewards, 'paid');
+    processReward(paidRewards);
   }
 
   if (giftBoxItem.attributes.lootList.length > 0) {
     common_core.items[giftBoxItemID] = giftBoxItem;
-
-    const ApplyProfileChanges = [{
-      changeType: "itemAdded",
-      itemId: giftBoxItemID,
-      item: common_core.items[giftBoxItemID]
-    }];
-
-    athena.rvn += 1;
-    athena.commandRevision += 1;
-    athena.updated = new Date().toISOString();
-    common_core.rvn += 1;
-    common_core.commandRevision += 1;
-    common_core.updated = new Date().toISOString();
-
     await Profile.findOneAndUpdate({ accountId }, {
       $set: {
         'profiles.athena': athena,
         'profiles.common_core': common_core
       }
     }, { new: true });
-
     functions.sendXmppMessageToId({
       type: "com.epicgames.gift.received",
       payload: {},
       timestamp: new Date().toISOString()
     }, accountId);
-
     log.backend(`Rewards granted for level ${level}.`);
   } else {
     log.backend(`No items to grant for level ${level}, skipping gift.`);
   }
 };
 
-// Route pour ajouter de l'XP à un utilisateur
 app.get("/api/addxp", async (req, res) => {
   const { apikey, username, reason } = req.query;
 
@@ -163,28 +144,17 @@ app.get("/api/addxp", async (req, res) => {
       return res.status(404).send('Profile not found.');
     }
 
-    let xpToAdd;
-    if (reason === "Kills") {
-      xpToAdd = XP_PER_KILL;
-    } else if (reason === "Chests") {
-      xpToAdd = XP_PER_CHEST;
-    } else if (reason === "Wins") {
-      xpToAdd = XP_PER_WIN;
-    } else {
-      return res.status(400).send('Invalid reason provided.');
-    }
+    let xpToAdd = {
+      Kills: XP_PER_KILL,
+      Chests: XP_PER_CHEST,
+      Wins: XP_PER_WIN
+    }[reason] || 0;
+
+    if (!xpToAdd) return res.status(400).send('Invalid reason provided.');
 
     const currentLevel = profile.profiles.athena.stats.attributes.level;
-    if (reason === "Kills") {
-      xpToAdd += xpToAdd * (currentLevel * 0.1);
-    } else if (reason === "Wins") {
-      xpToAdd += xpToAdd * (currentLevel * 0.15);
-    } else if (reason === "Chests") {
-      xpToAdd += xpToAdd * (currentLevel * 1);
-    }
-
-    const multiplier = user.donator ? 1.5 : 1;
-    xpToAdd = xpToAdd * multiplier;
+    xpToAdd += xpToAdd * (currentLevel * (reason === "Chests" ? 1 : reason === "Wins" ? 0.15 : 0.1));
+    xpToAdd *= user.donator ? 1.5 : 1;
 
     const newQuantity = profile.profiles.athena.stats.attributes.xp + xpToAdd;
     let levelThreshold = levelThresholdsAbove100[currentLevel] || 0;
@@ -193,48 +163,16 @@ app.get("/api/addxp", async (req, res) => {
       return res.status(200).send('XP granting has been stopped at level 100.');
     }
 
-    const xpDifference = newQuantity - levelThreshold;
-    let updatedLevel = currentLevel;
-
-    if (xpDifference >= 0) {
-      // Passer au niveau suivant
-      updatedLevel = currentLevel + 1;
-
-      const updatedXP = xpDifference % levelThreshold;
-
-      const levelUpdate = {
-        $inc: {
-          'profiles.athena.stats.attributes.level': 1,
-          'profiles.athena.stats.attributes.book_level': 1, // Passer au niveau suivant du Battle Pass
-          'profiles.athena.stats.attributes.accountLevel': 1,
-        },
-        $set: {
-          'profiles.athena.stats.attributes.xp': updatedXP,
-          'profiles.athena.stats.attributes.book_xp': 0 // Réinitialiser les étoiles de combat
-        }
-      };
-
-      await Profile.findOneAndUpdate({ accountId: user.accountId }, levelUpdate);
-      await grantReward(user.accountId, updatedLevel);
-    } else {
-      await Profile.findOneAndUpdate({ accountId: user.accountId }, {
-        $inc: {
-          'profiles.athena.stats.attributes.xp': xpToAdd,
-          // Pas d'ajout de book_xp ici pour éviter l'ajout des étoiles de combat
-        }
-      });
+    if (newQuantity >= levelThreshold) {
+      await grantReward(user.accountId, currentLevel + 1);
     }
 
     log.backend(`${user.username} has received XP for ${reason}.`);
-
-    const finalUpdatedProfile = await Profile.findOne({ accountId: user.accountId });
-    const newLevel = finalUpdatedProfile.profiles.athena.stats.attributes.level;
     return res.status(200).json({
       status: 'success',
       message: 'XP added and level updated.',
-      newLevel
+      newLevel: currentLevel + (newQuantity >= levelThreshold ? 1 : 0)
     });
-
   } catch (error) {
     console.error(error);
     return res.status(500).send('Server error.');
