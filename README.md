@@ -50,6 +50,8 @@ Created by [Burlone](https://github.com/burlone0), This is a modded backend, all
     * [x] An improved matchmaker.
 * Multiple Gameserver Support:
     * [x] An improved multiple gameserver.
+* Levels and XP:
+     * [x] Added the Levels and XP backend part
 * Website:
     * [x] A simple website where you can create an account to join the game.
 * XMPP:
