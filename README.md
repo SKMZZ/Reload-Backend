@@ -7,6 +7,8 @@ Reload Backend is a universal Fortnite private server backend written in [JavaSc
 Created by [Burlone](https://github.com/burlone0), This is a modded backend, all main backend credits to [Lawin](https://github.com/Lawin0129)
 
 ## Features
+* grant specific cosemtics request:
+    * [x] Backend part , you can grant people cosmetics with a request to the backend
 * Locker:
     * [x] Changing items.
     * [x] Changing banner icon and banner color.
