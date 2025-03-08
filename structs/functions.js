@@ -138,6 +138,10 @@ function getContentPages(req) {
             contentpages.subgameinfo.battleroyale.image = "https://cdn.discordapp.com/attachments/927739901540188200/930880421514846268/19br-wf-subgame-select-512x1024-16d8bb0f218f.jpg";
             contentpages.specialoffervideo.bSpecialOfferEnabled = "true";
         }
+        if (memory.season == 12) {
+            contentpages.dynamicbackgrounds.backgrounds.backgrounds[0].stage = "worldcup";
+            contentpages.dynamicbackgrounds.backgrounds.backgrounds[1].stage = "worldcup";
+        }
 
         if (memory.season == 20) {
             if (memory.build == 20.40) {
