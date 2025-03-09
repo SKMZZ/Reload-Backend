@@ -64,6 +64,8 @@ Created by [Burlone](https://github.com/burlone0), This is a modded backend, all
     * [x] A working https/ssl system.
 
 ## TO-DO
+- [ ] Matchmaker with queue ( already in progress ).
+- [ ] Tourneys( Maybe ).
 - [ ] Differentiate ports between xmpp and matchmaker
 - [ ] Create a support with save the world
 - [ ] Create a support with creative
