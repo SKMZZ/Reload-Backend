@@ -7,6 +7,8 @@ Reload Backend is a universal Fortnite private server backend written in [JavaSc
 Created by [Burlone](https://github.com/burlone0), This is a modded backend, all main backend credits to [Lawin](https://github.com/Lawin0129)
 
 ## Features
+* Levels and XP:
+    * [x] Added the Levels and XP backend part
 * grant specific cosemtics request:
     * [x] Backend part , you can grant people cosmetics with a request to the backend
 * Locker:
@@ -52,8 +54,6 @@ Created by [Burlone](https://github.com/burlone0), This is a modded backend, all
     * [x] An improved matchmaker.
 * Multiple Gameserver Support:
     * [x] An improved multiple gameserver.
-* Levels and XP:
-     * [x] Added the Levels and XP backend part
 * Website:
     * [x] A simple website where you can create an account to join the game.
 * XMPP:
